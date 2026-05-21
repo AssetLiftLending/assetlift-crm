@@ -1,6 +1,5 @@
+import { InboxClient } from "@/components/crm/inbox-client";
 import { PageHead } from "@/components/crm/page-head";
-import { RecordTable } from "@/components/crm/record-table";
-import { inboxThreads } from "@/lib/mock-data";
 
 export default function InboxPage() {
   return (
@@ -8,19 +7,9 @@ export default function InboxPage() {
       <PageHead
         badge="Inbox"
         title="Borrower and lender communication"
-        description="This is where email, SMS, and call summaries will converge once live integrations are wired."
+        description="Threads can now be logged into the inbox, and the email module is ready for real provider credentials."
       />
-      <RecordTable
-        title="Open threads"
-        rows={inboxThreads}
-        columns={[
-          { key: "sender", label: "Sender", render: (row) => row.sender },
-          { key: "subject", label: "Subject", render: (row) => row.subject },
-          { key: "summary", label: "Summary", render: (row) => row.summary },
-          { key: "status", label: "Status", render: (row) => row.status },
-          { key: "age", label: "Age", render: (row) => row.age },
-        ]}
-      />
+      <InboxClient />
     </div>
   );
 }

@@ -64,6 +64,30 @@ export type IntegrationItem = {
   status: "Connected" | "Planned" | "Needs Setup";
 };
 
+export type DocumentWorkflow = {
+  id: string;
+  name: string;
+  detail: string;
+  status: "Active" | "Template" | "Blocked";
+  completed: number;
+  total: number;
+};
+
+export type EmailIntegrationSettings = {
+  providerLabel: string;
+  smtpHost: string;
+  smtpPort: string;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPass: string;
+  fromEmail: string;
+  fromName: string;
+  imapHost: string;
+  imapPort: string;
+  imapUser: string;
+  imapPass: string;
+};
+
 export const contacts: ContactRecord[] = [
   {
     id: "c1",
@@ -242,28 +266,28 @@ export const calendarItems: CalendarItem[] = [
     id: "cal1",
     title: "Michael Torres rate review",
     type: "Call",
-    date: "Today · 2:30 PM",
+    date: "Today - 2:30 PM",
     owner: "YL",
   },
   {
     id: "cal2",
     title: "Sarah Mitchell closing checklist",
     type: "Review",
-    date: "Today · 4:00 PM",
+    date: "Today - 4:00 PM",
     owner: "Ari",
   },
   {
     id: "cal3",
     title: "Jason Cole title escalation",
     type: "Follow-up",
-    date: "Tomorrow · 9:00 AM",
+    date: "Tomorrow - 9:00 AM",
     owner: "YL",
   },
   {
     id: "cal4",
     title: "Austin flip closing target",
     type: "Closing",
-    date: "Friday · 11:00 AM",
+    date: "Friday - 11:00 AM",
     owner: "Ari",
   },
 ];
@@ -318,6 +342,48 @@ export const integrations: IntegrationItem[] = [
     status: "Planned",
   },
 ];
+
+export const documentWorkflows: DocumentWorkflow[] = [
+  {
+    id: "doc1",
+    name: "Borrower intake pack",
+    detail: "LLC docs, operating agreement, purchase contract, rehab scope, bank statements",
+    status: "Active",
+    completed: 4,
+    total: 6,
+  },
+  {
+    id: "doc2",
+    name: "Lender submission pack",
+    detail: "Executive summary, borrower profile, property analysis, exit plan, rent support",
+    status: "Template",
+    completed: 5,
+    total: 5,
+  },
+  {
+    id: "doc3",
+    name: "Closing checklist",
+    detail: "Insurance, title, payoff, vesting, wire instructions, note package",
+    status: "Blocked",
+    completed: 5,
+    total: 7,
+  },
+];
+
+export const defaultEmailIntegrationSettings: EmailIntegrationSettings = {
+  providerLabel: "Google Workspace",
+  smtpHost: "smtp.gmail.com",
+  smtpPort: "587",
+  smtpSecure: false,
+  smtpUser: "",
+  smtpPass: "",
+  fromEmail: "",
+  fromName: "AssetLift Lending",
+  imapHost: "imap.gmail.com",
+  imapPort: "993",
+  imapUser: "",
+  imapPass: "",
+};
 
 export const metrics = {
   openLeads: 148,
