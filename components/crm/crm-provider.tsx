@@ -66,7 +66,8 @@ type CrmContextValue = CrmState & {
   saveEmailSettings: (settings: EmailIntegrationSettings) => void;
 };
 
-const STORAGE_KEY = "assetlift-crm-state-v1";
+const STORAGE_KEY = "assetlift-crm-state-v2";
+const LEGACY_STORAGE_KEY = "assetlift-crm-state-v1";
 
 const defaultState: CrmState = {
   contacts: initialContacts,
@@ -86,15 +87,106 @@ function createId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeDeals(value: unknown): DealRecord[] {
+  if (!Array.isArray(value)) {
+    return initialDeals;
+  }
+
+  return value.map((item, index) => {
+    const fallback = initialDeals[index % initialDeals.length];
+    if (!isObject(item)) {
+      return fallback;
+    }
+
+    const legacyStage = typeof item.stage === "string" ? item.stage : "";
+    const normalizedStageId =
+      typeof item.stageId === "string" && item.stageId
+        ? item.stageId
+        : legacyStage
+            .toLowerCase()
+            .replace(/&/g, "and")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "") || fallback.stageId;
+
+    return {
+      id: typeof item.id === "string" ? item.id : fallback.id,
+      borrower: typeof item.borrower === "string" ? item.borrower : fallback.borrower,
+      company: typeof item.company === "string" && item.company ? item.company : fallback.company,
+      property: typeof item.property === "string" ? item.property : fallback.property,
+      program: typeof item.program === "string" ? item.program : fallback.program,
+      stageId: normalizedStageId,
+      amount: typeof item.amount === "number" ? item.amount : fallback.amount,
+      lenderFit: typeof item.lenderFit === "string" ? item.lenderFit : fallback.lenderFit,
+      owner: typeof item.owner === "string" ? item.owner : fallback.owner,
+      risk:
+        item.risk === "Low" || item.risk === "Medium" || item.risk === "High"
+          ? item.risk
+          : fallback.risk,
+      status:
+        item.status === "Open" || item.status === "Won" || item.status === "Lost"
+          ? item.status
+          : "Open",
+      source: typeof item.source === "string" ? item.source : fallback.source,
+      nextStep: typeof item.nextStep === "string" ? item.nextStep : fallback.nextStep,
+      lastActivity:
+        typeof item.lastActivity === "string" ? item.lastActivity : fallback.lastActivity,
+      expectedClose:
+        typeof item.expectedClose === "string" ? item.expectedClose : fallback.expectedClose,
+      tags: Array.isArray(item.tags)
+        ? item.tags.filter((tag): tag is string => typeof tag === "string")
+        : fallback.tags,
+    };
+  });
+}
+
+function normalizeLoadedState(raw: unknown): CrmState {
+  if (!isObject(raw)) {
+    return defaultState;
+  }
+
+  return {
+    contacts: Array.isArray(raw.contacts) ? (raw.contacts as ContactRecord[]) : defaultState.contacts,
+    deals: normalizeDeals(raw.deals),
+    activities: Array.isArray(raw.activities)
+      ? (raw.activities as ActivityRecord[])
+      : defaultState.activities,
+    inboxThreads: Array.isArray(raw.inboxThreads)
+      ? (raw.inboxThreads as InboxThread[])
+      : defaultState.inboxThreads,
+    calendarItems: Array.isArray(raw.calendarItems)
+      ? (raw.calendarItems as CalendarItem[])
+      : defaultState.calendarItems,
+    automations: Array.isArray(raw.automations)
+      ? (raw.automations as AutomationItem[])
+      : defaultState.automations,
+    integrations: Array.isArray(raw.integrations)
+      ? (raw.integrations as IntegrationItem[])
+      : defaultState.integrations,
+    documentWorkflows: Array.isArray(raw.documentWorkflows)
+      ? (raw.documentWorkflows as DocumentWorkflow[])
+      : defaultState.documentWorkflows,
+    emailSettings: isObject(raw.emailSettings)
+      ? { ...defaultState.emailSettings, ...raw.emailSettings }
+      : defaultState.emailSettings,
+  };
+}
+
 export function CrmProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CrmState>(defaultState);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const raw =
+        window.localStorage.getItem(STORAGE_KEY) ??
+        window.localStorage.getItem(LEGACY_STORAGE_KEY);
       if (raw) {
-        setState({ ...defaultState, ...JSON.parse(raw) });
+        setState(normalizeLoadedState(JSON.parse(raw)));
+        window.localStorage.removeItem(LEGACY_STORAGE_KEY);
       }
     } catch {
       // Ignore malformed local storage payloads.
