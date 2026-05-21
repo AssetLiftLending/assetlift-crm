@@ -15,13 +15,28 @@ export type ContactRecord = {
 export type DealRecord = {
   id: string;
   borrower: string;
+  company: string;
   property: string;
   program: string;
-  stage: string;
+  stageId: string;
   amount: number;
   lenderFit: string;
   owner: string;
   risk: "Low" | "Medium" | "High";
+  status: "Open" | "Won" | "Lost";
+  source: string;
+  nextStep: string;
+  lastActivity: string;
+  expectedClose: string;
+  tags: string[];
+};
+
+export type PipelineStageDefinition = {
+  id: string;
+  name: string;
+  probability: number;
+  targetDays: number;
+  accent: string;
 };
 
 export type ActivityRecord = {
@@ -87,6 +102,65 @@ export type EmailIntegrationSettings = {
   imapUser: string;
   imapPass: string;
 };
+
+export const pipelineStages: PipelineStageDefinition[] = [
+  {
+    id: "new-lead",
+    name: "New lead",
+    probability: 10,
+    targetDays: 1,
+    accent: "#6d7a88",
+  },
+  {
+    id: "qualified",
+    name: "Qualified",
+    probability: 25,
+    targetDays: 2,
+    accent: "#0f7c82",
+  },
+  {
+    id: "consult-set",
+    name: "Consult set",
+    probability: 40,
+    targetDays: 3,
+    accent: "#4f74b8",
+  },
+  {
+    id: "application",
+    name: "Application",
+    probability: 55,
+    targetDays: 4,
+    accent: "#8d63b8",
+  },
+  {
+    id: "lender-review",
+    name: "Lender review",
+    probability: 68,
+    targetDays: 5,
+    accent: "#c76a2b",
+  },
+  {
+    id: "conditional-approval",
+    name: "Conditional approval",
+    probability: 80,
+    targetDays: 5,
+    accent: "#bf7b1c",
+  },
+  {
+    id: "underwriting",
+    name: "Underwriting",
+    probability: 88,
+    targetDays: 7,
+    accent: "#9e4a32",
+  },
+  {
+    id: "closing",
+    name: "Closing",
+    probability: 96,
+    targetDays: 4,
+    accent: "#1f6d44",
+  },
+];
 
 export const contacts: ContactRecord[] = [
   {
@@ -160,46 +234,146 @@ export const deals: DealRecord[] = [
   {
     id: "d1",
     borrower: "Michael Torres",
+    company: "Atlas Buy & Hold",
     property: "312 Rosemont Ave, Dallas, TX",
     program: "DSCR Rental",
-    stage: "Underwriting",
+    stageId: "underwriting",
     amount: 845000,
     lenderFit: "CoreVest / Kiavi / Lima One",
     owner: "YL",
     risk: "Low",
+    status: "Open",
+    source: "Website",
+    nextStep: "Collect final entity docs and updated appraisal.",
+    lastActivity: "12 minutes ago",
+    expectedClose: "May 29",
+    tags: ["Refi", "DSCR", "Texas"],
   },
   {
     id: "d2",
     borrower: "Sarah Mitchell",
+    company: "Mitchell Capital Homes",
     property: "812 Canyon Ridge, Austin, TX",
     program: "Fix & Flip",
-    stage: "Conditional Approval",
+    stageId: "conditional-approval",
     amount: 1260000,
     lenderFit: "RCN / Constructive / Civic",
     owner: "Ari",
     risk: "Medium",
+    status: "Open",
+    source: "Referral",
+    nextStep: "Clear reserve and insurance conditions with lender.",
+    lastActivity: "38 minutes ago",
+    expectedClose: "June 3",
+    tags: ["Flip", "Austin", "Urgent"],
   },
   {
     id: "d3",
     borrower: "Jason Cole",
+    company: "Cole Urban Revive",
     property: "4411 Wilshire Blvd, Los Angeles, CA",
     program: "Bridge",
-    stage: "Lender Review",
+    stageId: "lender-review",
     amount: 2100000,
     lenderFit: "Anchor / Genesis / RCN",
     owner: "YL",
     risk: "High",
+    status: "Open",
+    source: "Instagram",
+    nextStep: "Update title and exit strategy notes for lender box.",
+    lastActivity: "1 hour ago",
+    expectedClose: "June 11",
+    tags: ["Bridge", "California"],
   },
   {
     id: "d4",
     borrower: "Nina Patel",
+    company: "Patel Property Group",
     property: "22 Greene St, Jersey City, NJ",
     program: "Ground Up",
-    stage: "Sizing",
+    stageId: "qualified",
     amount: 3100000,
     lenderFit: "Acra / Builders Capital / Lima One",
     owner: "David",
     risk: "Medium",
+    status: "Open",
+    source: "Compare Page",
+    nextStep: "Book full consult and gather experience schedule.",
+    lastActivity: "2 hours ago",
+    expectedClose: "June 20",
+    tags: ["Ground Up", "New Jersey"],
+  },
+  {
+    id: "d5",
+    borrower: "Robert Fields",
+    company: "Fields Bridge Ventures",
+    property: "1700 Howell Mill Rd, Atlanta, GA",
+    program: "Bridge",
+    stageId: "consult-set",
+    amount: 1650000,
+    lenderFit: "Anchor / RCN / Park Place",
+    owner: "Ari",
+    risk: "Medium",
+    status: "Open",
+    source: "Partner",
+    nextStep: "Run lender matrix after consult.",
+    lastActivity: "3 hours ago",
+    expectedClose: "June 8",
+    tags: ["Bridge", "Georgia"],
+  },
+  {
+    id: "d6",
+    borrower: "Olivia Green",
+    company: "OG Capital",
+    property: "54 Water St, Tampa, FL",
+    program: "DSCR Rental",
+    stageId: "closing",
+    amount: 920000,
+    lenderFit: "Kiavi / CoreVest",
+    owner: "YL",
+    risk: "Low",
+    status: "Open",
+    source: "Outbound",
+    nextStep: "Confirm insurance and wire instructions.",
+    lastActivity: "9 minutes ago",
+    expectedClose: "May 24",
+    tags: ["Closing", "Florida", "DSCR"],
+  },
+  {
+    id: "d7",
+    borrower: "Brian Lewis",
+    company: "Lewis Redevelopment",
+    property: "88 N Clark St, Chicago, IL",
+    program: "Fix & Flip",
+    stageId: "closing",
+    amount: 1480000,
+    lenderFit: "Civic / RCN",
+    owner: "David",
+    risk: "Low",
+    status: "Won",
+    source: "Referral",
+    nextStep: "Funded - archive to servicing handoff.",
+    lastActivity: "Yesterday",
+    expectedClose: "Closed",
+    tags: ["Funded", "Illinois"],
+  },
+  {
+    id: "d8",
+    borrower: "Emily Foster",
+    company: "Foster Family Investments",
+    property: "91 Pearl St, Boston, MA",
+    program: "Bridge",
+    stageId: "qualified",
+    amount: 740000,
+    lenderFit: "Genesis / Lima One",
+    owner: "Ari",
+    risk: "High",
+    status: "Lost",
+    source: "Website",
+    nextStep: "Lost to pricing - keep on nurture track.",
+    lastActivity: "2 days ago",
+    expectedClose: "Lost",
+    tags: ["Lost", "Pricing"],
   },
 ];
 

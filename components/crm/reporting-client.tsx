@@ -6,6 +6,7 @@ import { formatCurrency } from "@/lib/utils";
 
 export function ReportingClient() {
   const { contacts, deals, inboxThreads, metrics } = useCrm();
+  const openDeals = deals.filter((deal) => deal.status === "Open");
 
   return (
     <div className="section-grid three">
@@ -22,7 +23,7 @@ export function ReportingClient() {
       <Card>
         <SectionHeader eyebrow="Volume" title="Pipeline value" />
         <strong style={{ fontSize: "2.1rem" }}>{formatCurrency(metrics.pipelineValue)}</strong>
-        <p>{deals.length} files are included in the current pipeline total.</p>
+        <p>{openDeals.length} open files are included in the current pipeline total.</p>
       </Card>
     </div>
   );

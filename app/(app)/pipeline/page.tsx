@@ -7,7 +7,7 @@ export default function PipelinePage() {
       <PageHead
         badge="Pipeline"
         title="Deal pipeline and lender routing"
-        description="Pipeline cards now move forward stage by stage instead of staying static."
+        description="The pipeline now behaves like a real opportunities board with configurable stages, filters, and win/loss management."
       />
       <PipelineClient />
     </div>

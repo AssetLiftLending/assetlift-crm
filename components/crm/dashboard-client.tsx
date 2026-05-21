@@ -6,7 +6,9 @@ import { Badge, Card, SectionHeader } from "@/components/ui/primitives";
 import { formatCurrency } from "@/lib/utils";
 
 export function DashboardClient() {
-  const { activities, calendarItems, deals, inboxThreads, metrics } = useCrm();
+  const { activities, calendarItems, deals, inboxThreads, metrics, pipelineStages } = useCrm();
+  const stageName = (stageId: string) =>
+    pipelineStages.find((stage) => stage.id === stageId)?.name ?? stageId;
 
   return (
     <>
@@ -34,7 +36,7 @@ export function DashboardClient() {
                 <div key={deal.id} className="signal-row">
                   <div>
                     <strong>{deal.borrower}</strong>
-                    <p>{deal.program} - {deal.stage}</p>
+                    <p>{deal.program} - {stageName(deal.stageId)}</p>
                   </div>
                   <Badge>{deal.risk} risk</Badge>
                 </div>
@@ -59,7 +61,7 @@ export function DashboardClient() {
                 <div>
                   <strong>{deal.borrower}</strong>
                   <p>{deal.property}</p>
-                  <p>{deal.program} - {deal.stage}</p>
+                  <p>{deal.program} - {stageName(deal.stageId)}</p>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <strong>{formatCurrency(deal.amount)}</strong>

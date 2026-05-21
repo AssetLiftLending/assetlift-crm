@@ -19,6 +19,7 @@ import {
   inboxThreads as initialInboxThreads,
   integrations as initialIntegrations,
   metrics as initialMetrics,
+  pipelineStages as initialPipelineStages,
   type ActivityRecord,
   type AutomationItem,
   type CalendarItem,
@@ -28,6 +29,7 @@ import {
   type EmailIntegrationSettings,
   type InboxThread,
   type IntegrationItem,
+  type PipelineStageDefinition,
 } from "@/lib/mock-data";
 
 type CrmState = {
@@ -43,6 +45,7 @@ type CrmState = {
 };
 
 type CrmContextValue = CrmState & {
+  pipelineStages: PipelineStageDefinition[];
   metrics: {
     openLeads: number;
     activeLoans: number;
@@ -52,7 +55,9 @@ type CrmContextValue = CrmState & {
     responseSla: string;
   };
   addContact: (contact: Omit<ContactRecord, "id" | "lastTouch">) => void;
-  updateDealStage: (id: string, stage: string) => void;
+  addDeal: (deal: Omit<DealRecord, "id" | "lastActivity">) => void;
+  moveDealToStage: (id: string, stageId: string) => void;
+  updateDealStatus: (id: string, status: DealRecord["status"]) => void;
   addInboxThread: (thread: Omit<InboxThread, "id" | "age">) => void;
   addCalendarItem: (item: Omit<CalendarItem, "id">) => void;
   updateAutomationStatus: (id: string, status: AutomationItem["status"]) => void;
@@ -104,17 +109,20 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   }, [hydrated, state]);
 
   const value = useMemo<CrmContextValue>(() => {
+    const openDeals = state.deals.filter((deal) => deal.status === "Open");
+    const fundedDeals = state.deals.filter((deal) => deal.status === "Won");
     const metrics = {
       openLeads: state.contacts.length,
-      activeLoans: state.deals.length,
-      fundedThisMonth: initialMetrics.fundedThisMonth,
-      pipelineValue: state.deals.reduce((sum, deal) => sum + deal.amount, 0),
+      activeLoans: openDeals.length,
+      fundedThisMonth: fundedDeals.length || initialMetrics.fundedThisMonth,
+      pipelineValue: openDeals.reduce((sum, deal) => sum + deal.amount, 0),
       overdueTasks: state.calendarItems.length,
       responseSla: initialMetrics.responseSla,
     };
 
     return {
       ...state,
+      pipelineStages: initialPipelineStages,
       metrics,
       addContact(contact) {
         setState((current) => ({
@@ -139,12 +147,76 @@ export function CrmProvider({ children }: { children: ReactNode }) {
           ],
         }));
       },
-      updateDealStage(id, stage) {
+      addDeal(deal) {
+        setState((current) => ({
+          ...current,
+          deals: [
+            {
+              ...deal,
+              id: createId("deal"),
+              lastActivity: "Just now",
+            },
+            ...current.deals,
+          ],
+          activities: [
+            {
+              id: createId("activity"),
+              title: "Opportunity created",
+              detail: `${deal.borrower} was added to the pipeline in ${deal.program}.`,
+              owner: deal.owner,
+              time: "Just now",
+            },
+            ...current.activities,
+          ],
+        }));
+      },
+      moveDealToStage(id, stageId) {
         setState((current) => ({
           ...current,
           deals: current.deals.map((deal) =>
-            deal.id === id ? { ...deal, stage } : deal
+            deal.id === id ? { ...deal, stageId, lastActivity: "Just now" } : deal
           ),
+          activities: [
+            {
+              id: createId("activity"),
+              title: "Pipeline stage updated",
+              detail: "A deal moved to a new pipeline stage.",
+              owner: current.deals.find((deal) => deal.id === id)?.owner ?? "System",
+              time: "Just now",
+            },
+            ...current.activities,
+          ],
+        }));
+      },
+      updateDealStatus(id, status) {
+        setState((current) => ({
+          ...current,
+          deals: current.deals.map((deal) =>
+            deal.id === id
+              ? {
+                  ...deal,
+                  status,
+                  lastActivity: "Just now",
+                  expectedClose:
+                    status === "Won" ? "Closed" : status === "Lost" ? "Lost" : deal.expectedClose,
+                }
+              : deal
+          ),
+          activities: [
+            {
+              id: createId("activity"),
+              title:
+                status === "Won"
+                  ? "Deal marked won"
+                  : status === "Lost"
+                    ? "Deal marked lost"
+                    : "Deal reopened",
+              detail: `Pipeline status changed to ${status}.`,
+              owner: current.deals.find((deal) => deal.id === id)?.owner ?? "System",
+              time: "Just now",
+            },
+            ...current.activities,
+          ],
         }));
       },
       addInboxThread(thread) {

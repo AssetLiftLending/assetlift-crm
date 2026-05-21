@@ -249,7 +249,7 @@ input {
   display: flex;
   justify-content: space-between;
   gap: 24px;
-  align-items: end;
+  align-items: flex-end;
 }
 
 .hero-panel {
@@ -270,7 +270,7 @@ input {
 
 .hero-grid {
   grid-template-columns: 1.4fr 0.9fr;
-  align-items: end;
+  align-items: flex-end;
 }
 
 .metric-grid {
@@ -326,7 +326,7 @@ input {
   display: flex;
   justify-content: space-between;
   gap: 14px;
-  align-items: start;
+  align-items: flex-start;
   padding: 14px 0;
   border-top: 1px solid var(--line);
 }
@@ -419,6 +419,92 @@ input {
   background: white;
 }
 
+.pipeline-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.pipeline-controls,
+.pipeline-form-grid,
+.pipeline-card-actions,
+.pipeline-amount-row,
+.pipeline-column-head,
+.pipeline-deal-top {
+  display: flex;
+  gap: 12px;
+}
+
+.pipeline-controls,
+.pipeline-form-grid,
+.pipeline-card-actions {
+  flex-wrap: wrap;
+}
+
+.pipeline-controls input,
+.pipeline-controls select,
+.pipeline-form-grid input,
+.pipeline-form-grid select {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: white;
+  padding: 12px 14px;
+}
+
+.pipeline-controls input {
+  min-width: 320px;
+  flex: 1;
+}
+
+.pipeline-form-grid input,
+.pipeline-form-grid select {
+  min-width: 180px;
+  flex: 1 1 180px;
+}
+
+.pipeline-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(280px, 1fr));
+  gap: 16px;
+  overflow-x: auto;
+  align-items: flex-start;
+}
+
+.pipeline-column {
+  min-width: 280px;
+}
+
+.pipeline-column-head {
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.pipeline-column-head h3 {
+  margin: 8px 0 6px;
+}
+
+.pipeline-column-head p,
+.pipeline-deal-card p,
+.pipeline-amount-row span {
+  color: var(--muted);
+}
+
+.pipeline-column-total {
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.pipeline-deal-card {
+  background: white;
+}
+
+.pipeline-deal-top,
+.pipeline-amount-row {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
 @media (max-width: 1200px) {
   .metric-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -454,6 +540,10 @@ input {
 
   .metric-grid,
   .section-grid.three {
+    grid-template-columns: 1fr;
+  }
+
+  .pipeline-board {
     grid-template-columns: 1fr;
   }
 
