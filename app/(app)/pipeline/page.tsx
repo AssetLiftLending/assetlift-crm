@@ -5,9 +5,9 @@ export default function PipelinePage() {
   return (
     <div className="module-grid">
       <PageHead
-        badge="Pipeline"
-        title="Deal pipeline and lender routing"
-        description="The pipeline now behaves like a real opportunities board with configurable stages, filters, and win/loss management."
+        badge="Opportunities"
+        title="Opportunity pipeline"
+        description="A real operator-facing opportunities board with searchable stages, compact deal cards, and win/loss tracking."
       />
       <PipelineClient />
     </div>
