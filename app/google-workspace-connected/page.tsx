@@ -1,37 +1,35 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
-type PageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
+function GoogleWorkspaceConnectedContent() {
+  const searchParams = useSearchParams();
 
-export default function GoogleWorkspaceConnectedPage({ searchParams }: PageProps) {
   useEffect(() => {
-    async function completeConnection() {
-      const params = await searchParams;
-      const getValue = (key: string) => {
-        const value = params[key];
-        return Array.isArray(value) ? value[0] || "" : value || "";
-      };
-
+    function completeConnection() {
       const payload = {
-        googleConnected: getValue("connected") === "true",
-        googleEmail: getValue("email"),
-        googleAccessToken: getValue("accessToken"),
-        googleRefreshToken: getValue("refreshToken"),
-        googleTokenExpiry: Number(getValue("tokenExpiry") || "0"),
+        googleConnected: searchParams.get("connected") === "true",
+        googleEmail: searchParams.get("email") || "",
+        googleAccessToken: searchParams.get("accessToken") || "",
+        googleRefreshToken: searchParams.get("refreshToken") || "",
+        googleTokenExpiry: Number(searchParams.get("tokenExpiry") || "0"),
         providerLabel: "Google Workspace",
-        fromEmail: getValue("email"),
+        fromEmail: searchParams.get("email") || "",
         fromName: "AssetLift Lending",
         smtpHost: "smtp.gmail.com",
         smtpPort: "587",
         smtpSecure: false,
-        smtpUser: getValue("email"),
+        smtpUser: searchParams.get("email") || "",
         imapHost: "imap.gmail.com",
         imapPort: "993",
-        imapUser: getValue("email"),
+        imapUser: searchParams.get("email") || "",
       };
+
+      if (!payload.googleConnected || !payload.googleAccessToken) {
+        window.location.replace("/integrations?google_error=missing_oauth_payload");
+        return;
+      }
 
       window.localStorage.setItem("assetlift-google-workspace-oauth", JSON.stringify(payload));
       window.location.replace("/integrations?google=connected");
@@ -41,4 +39,12 @@ export default function GoogleWorkspaceConnectedPage({ searchParams }: PageProps
   }, [searchParams]);
 
   return <div style={{ padding: 24 }}>Completing Google Workspace connection...</div>;
+}
+
+export default function GoogleWorkspaceConnectedPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24 }}>Completing Google Workspace connection...</div>}>
+      <GoogleWorkspaceConnectedContent />
+    </Suspense>
+  );
 }
