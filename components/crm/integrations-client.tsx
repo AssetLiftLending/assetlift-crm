@@ -4,6 +4,28 @@ import { useEffect, useState } from "react";
 import { useCrm } from "@/components/crm/crm-provider";
 import { Badge, Card, SectionHeader } from "@/components/ui/primitives";
 
+function createDisconnectedSettings(fromName: string) {
+  return {
+    providerLabel: "Google Workspace",
+    smtpHost: "smtp.gmail.com",
+    smtpPort: "587",
+    smtpSecure: false,
+    smtpUser: "",
+    smtpPass: "",
+    fromEmail: "",
+    fromName: fromName || "AssetLift Lending",
+    imapHost: "imap.gmail.com",
+    imapPort: "993",
+    imapUser: "",
+    imapPass: "",
+    googleConnected: false,
+    googleEmail: "",
+    googleAccessToken: "",
+    googleRefreshToken: "",
+    googleTokenExpiry: 0,
+  };
+}
+
 export function IntegrationsClient() {
   const { emailSettings, integrations, saveEmailSettings, updateIntegrationStatus } = useCrm();
   const [settings, setSettings] = useState(emailSettings);
@@ -150,6 +172,31 @@ export function IntegrationsClient() {
     }
   }
 
+  function clearGoogleState(message: string) {
+    const nextSettings = createDisconnectedSettings(settings.fromName);
+    setSettings(nextSettings);
+    saveEmailSettings(nextSettings);
+    window.localStorage.removeItem("assetlift-google-workspace-oauth");
+    setResult(message);
+
+    const cleanUrl = new URL(window.location.href);
+    [
+      "connected",
+      "google",
+      "email",
+      "accessToken",
+      "refreshToken",
+      "tokenExpiry",
+      "google_error",
+    ].forEach((key) => cleanUrl.searchParams.delete(key));
+    window.history.replaceState({}, "", cleanUrl.toString());
+  }
+
+  function reconnectGoogleWorkspace() {
+    clearGoogleState("Mailbox state cleared. Starting a fresh Google Workspace sign-in.");
+    window.location.href = "/api/google/workspace/start";
+  }
+
   return (
     <div className="section-grid two">
       <Card>
@@ -206,15 +253,37 @@ export function IntegrationsClient() {
                 From email: <strong>{settings.fromEmail || settings.googleEmail}</strong>
               </p>
             ) : null}
-            <button
-              type="button"
-              className="primary-button"
-              onClick={() => {
-                window.location.href = "/api/google/workspace/start";
-              }}
-            >
-              {settings.googleConnected ? "Reconnect Google Workspace" : "Connect Google Workspace"}
-            </button>
+            <div className="pill-row">
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => {
+                  if (settings.googleConnected) {
+                    reconnectGoogleWorkspace();
+                    return;
+                  }
+                  window.location.href = "/api/google/workspace/start";
+                }}
+              >
+                {settings.googleConnected ? "Reconnect Google Workspace" : "Connect Google Workspace"}
+              </button>
+              {settings.googleConnected ? (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => clearGoogleState("Google Workspace disconnected in this browser.")}
+                >
+                  Disconnect mailbox
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => clearGoogleState("Mailbox state reset in this browser.")}
+              >
+                Reset mailbox state
+              </button>
+            </div>
           </div>
 
           <input value={settings.providerLabel} onChange={(e) => setSettings({ ...settings, providerLabel: e.target.value })} placeholder="Provider label" />
