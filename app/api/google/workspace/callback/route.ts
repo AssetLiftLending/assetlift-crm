@@ -56,8 +56,9 @@ export async function GET(request: Request) {
   });
 
   const user = userResponse.ok ? ((await userResponse.json()) as GoogleUserInfo) : {};
-  const appRedirect = new URL("/google-workspace-connected", origin);
+  const appRedirect = new URL("/integrations", origin);
   appRedirect.searchParams.set("connected", "true");
+  appRedirect.searchParams.set("google", "connected");
   appRedirect.searchParams.set("email", user.email || "");
   appRedirect.searchParams.set("accessToken", tokens.access_token);
   appRedirect.searchParams.set("refreshToken", tokens.refresh_token || "");

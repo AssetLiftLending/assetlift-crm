@@ -16,6 +16,49 @@ export function IntegrationsClient() {
   }, [emailSettings]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get("accessToken");
+    const connected = params.get("connected");
+    const email = params.get("email") || "";
+
+    if (connected === "true" && accessToken) {
+      const nextSettings = {
+        ...emailSettings,
+        ...settings,
+        googleConnected: true,
+        googleEmail: email,
+        googleAccessToken: accessToken,
+        googleRefreshToken: params.get("refreshToken") || "",
+        googleTokenExpiry: Number(params.get("tokenExpiry") || "0"),
+        providerLabel: "Google Workspace",
+        fromEmail: email,
+        fromName: settings.fromName || "AssetLift Lending",
+        smtpHost: "smtp.gmail.com",
+        smtpPort: "587",
+        smtpSecure: false,
+        smtpUser: email,
+        imapHost: "imap.gmail.com",
+        imapPort: "993",
+        imapUser: email,
+      };
+
+      setSettings(nextSettings);
+      saveEmailSettings(nextSettings);
+      setResult(email ? `Connected as ${email}` : "Google Workspace connected");
+
+      const cleanUrl = new URL(window.location.href);
+      [
+        "connected",
+        "google",
+        "email",
+        "accessToken",
+        "refreshToken",
+        "tokenExpiry",
+      ].forEach((key) => cleanUrl.searchParams.delete(key));
+      window.history.replaceState({}, "", cleanUrl.toString());
+      return;
+    }
+
     const raw = window.localStorage.getItem("assetlift-google-workspace-oauth");
     if (!raw) return;
 
@@ -29,7 +72,7 @@ export function IntegrationsClient() {
     } catch {
       // Ignore malformed local payloads.
     }
-  }, [saveEmailSettings, settings]);
+  }, [emailSettings, saveEmailSettings, settings]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
