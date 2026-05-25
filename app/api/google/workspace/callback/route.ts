@@ -72,8 +72,8 @@ export async function GET(request: Request) {
   });
 
   const user = userResponse.ok ? ((await userResponse.json()) as GoogleUserInfo) : {};
-  const appRedirect = new URL(returnTo, origin);
-  appRedirect.searchParams.set("google", "connected");
+  const appRedirect = new URL("/google-workspace-connected", origin);
+  appRedirect.searchParams.set("returnTo", returnTo);
   const response = NextResponse.redirect(appRedirect);
   response.cookies.set(
     GOOGLE_WORKSPACE_COOKIE,

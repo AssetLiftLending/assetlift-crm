@@ -7,35 +7,25 @@ function GoogleWorkspaceConnectedContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    function completeConnection() {
-      const payload = {
-        googleConnected: searchParams.get("connected") === "true",
-        googleEmail: searchParams.get("email") || "",
-        googleAccessToken: searchParams.get("accessToken") || "",
-        googleRefreshToken: searchParams.get("refreshToken") || "",
-        googleTokenExpiry: Number(searchParams.get("tokenExpiry") || "0"),
-        providerLabel: "Google Workspace",
-        fromEmail: searchParams.get("email") || "",
-        fromName: "AssetLift Lending",
-        smtpHost: "smtp.gmail.com",
-        smtpPort: "587",
-        smtpSecure: false,
-        smtpUser: searchParams.get("email") || "",
-        imapHost: "imap.gmail.com",
-        imapPort: "993",
-        imapUser: searchParams.get("email") || "",
-      };
+    async function completeConnection() {
+      const returnTo = searchParams.get("returnTo") || "/integrations";
+      const response = await fetch("/api/google/workspace/pending", {
+        method: "GET",
+        credentials: "same-origin",
+      });
+      const data = await response.json().catch(() => ({ payload: null }));
+      const payload = data?.payload;
 
-      if (!payload.googleConnected || !payload.googleAccessToken) {
-        window.location.replace("/integrations?google_error=missing_oauth_payload");
+      if (!payload?.googleConnected || !payload?.googleAccessToken) {
+        window.location.replace(`${returnTo}?google_error=missing_oauth_payload`);
         return;
       }
 
       window.localStorage.setItem("assetlift-google-workspace-oauth", JSON.stringify(payload));
-      window.location.replace("/integrations?google=connected");
+      window.location.replace(`${returnTo}?google=connected`);
     }
 
-    completeConnection();
+    void completeConnection();
   }, [searchParams]);
 
   return <div style={{ padding: 24 }}>Completing Google Workspace connection...</div>;
