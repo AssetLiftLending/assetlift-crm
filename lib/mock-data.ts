@@ -54,6 +54,9 @@ export type InboxThread = {
   summary: string;
   status: "Needs Reply" | "Waiting" | "Escalated";
   age: string;
+  snippet?: string;
+  direction?: "inbound" | "outbound";
+  sentAt?: string;
 };
 
 export type CalendarItem = {

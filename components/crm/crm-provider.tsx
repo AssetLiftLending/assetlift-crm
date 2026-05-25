@@ -59,6 +59,7 @@ type CrmContextValue = CrmState & {
   moveDealToStage: (id: string, stageId: string) => void;
   updateDealStatus: (id: string, status: DealRecord["status"]) => void;
   addInboxThread: (thread: Omit<InboxThread, "id" | "age">) => void;
+  replaceInboxThreads: (threads: InboxThread[]) => void;
   addCalendarItem: (item: Omit<CalendarItem, "id">) => void;
   updateAutomationStatus: (id: string, status: AutomationItem["status"]) => void;
   updateIntegrationStatus: (id: string, status: IntegrationItem["status"]) => void;
@@ -395,6 +396,12 @@ export function CrmProvider({ children }: { children: ReactNode }) {
             },
             ...current.inboxThreads,
           ],
+        }));
+      },
+      replaceInboxThreads(threads) {
+        setState((current) => ({
+          ...current,
+          inboxThreads: threads,
         }));
       },
       addCalendarItem(item) {

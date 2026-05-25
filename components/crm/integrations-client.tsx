@@ -27,15 +27,47 @@ export function IntegrationsClient() {
     }
   }, [saveEmailSettings, settings]);
 
+  async function getFreshGoogleSettings() {
+    if (
+      !settings.googleConnected ||
+      !settings.googleRefreshToken ||
+      !settings.googleTokenExpiry ||
+      settings.googleTokenExpiry > Date.now() + 60_000
+    ) {
+      return settings;
+    }
+
+    const response = await fetch("/api/google/workspace/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: settings.googleRefreshToken }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Google token refresh failed");
+    }
+
+    const nextSettings = {
+      ...settings,
+      googleAccessToken: payload.accessToken,
+      googleTokenExpiry: payload.tokenExpiry,
+    };
+    setSettings(nextSettings);
+    saveEmailSettings(nextSettings);
+    return nextSettings;
+  }
+
   async function sendTestEmail() {
     setSending(true);
     setResult("");
     try {
+      const latestSettings = await getFreshGoogleSettings();
       const response = await fetch("/api/email/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          settings,
+          settings: latestSettings,
           to: testTo,
           subject: "AssetLift CRM email integration test",
           text: "Your new AssetLift CRM is connected and able to send email.",

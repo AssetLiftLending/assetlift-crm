@@ -22,6 +22,8 @@ export default function GoogleWorkspaceConnectedPage({ searchParams }: PageProps
         googleRefreshToken: getValue("refreshToken"),
         googleTokenExpiry: Number(getValue("tokenExpiry") || "0"),
         providerLabel: "Google Workspace",
+        fromEmail: getValue("email"),
+        fromName: "AssetLift Lending",
         smtpHost: "smtp.gmail.com",
         smtpPort: "587",
         smtpSecure: false,

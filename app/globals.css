@@ -39,6 +39,10 @@ input {
   font: inherit;
 }
 
+textarea {
+  font: inherit;
+}
+
 .app-shell {
   min-height: 100vh;
 }
@@ -93,6 +97,16 @@ input {
   border-radius: 14px;
   padding: 14px 16px;
   background: white;
+}
+
+.crm-textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: white;
+  resize: vertical;
+  min-height: 180px;
 }
 
 .primary-button {
