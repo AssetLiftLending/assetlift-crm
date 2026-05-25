@@ -3,28 +3,11 @@
 import { useEffect, useState } from "react";
 import { useCrm } from "@/components/crm/crm-provider";
 import { Badge, Card, SectionHeader } from "@/components/ui/primitives";
-
-function createDisconnectedSettings(fromName: string) {
-  return {
-    providerLabel: "Google Workspace",
-    smtpHost: "smtp.gmail.com",
-    smtpPort: "587",
-    smtpSecure: false,
-    smtpUser: "",
-    smtpPass: "",
-    fromEmail: "",
-    fromName: fromName || "AssetLift Lending",
-    imapHost: "imap.gmail.com",
-    imapPort: "993",
-    imapUser: "",
-    imapPass: "",
-    googleConnected: false,
-    googleEmail: "",
-    googleAccessToken: "",
-    googleRefreshToken: "",
-    googleTokenExpiry: 0,
-  };
-}
+import {
+  buildConnectedGoogleSettings,
+  createDisconnectedEmailSettings,
+  GOOGLE_OAUTH_QUERY_KEYS,
+} from "@/lib/google-workspace-client";
 
 export function IntegrationsClient() {
   const { emailSettings, integrations, saveEmailSettings, updateIntegrationStatus } = useCrm();
@@ -39,44 +22,15 @@ export function IntegrationsClient() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const accessToken = params.get("accessToken");
-    const connected = params.get("connected");
-    const email = params.get("email") || "";
+    const nextSettings = buildConnectedGoogleSettings({ ...emailSettings, ...settings }, params);
 
-    if (connected === "true" && accessToken) {
-      const nextSettings = {
-        ...emailSettings,
-        ...settings,
-        googleConnected: true,
-        googleEmail: email,
-        googleAccessToken: accessToken,
-        googleRefreshToken: params.get("refreshToken") || "",
-        googleTokenExpiry: Number(params.get("tokenExpiry") || "0"),
-        providerLabel: "Google Workspace",
-        fromEmail: email,
-        fromName: settings.fromName || "AssetLift Lending",
-        smtpHost: "smtp.gmail.com",
-        smtpPort: "587",
-        smtpSecure: false,
-        smtpUser: email,
-        imapHost: "imap.gmail.com",
-        imapPort: "993",
-        imapUser: email,
-      };
-
+    if (nextSettings) {
       setSettings(nextSettings);
       saveEmailSettings(nextSettings);
-      setResult(email ? `Connected as ${email}` : "Google Workspace connected");
+      setResult(nextSettings.googleEmail ? `Connected as ${nextSettings.googleEmail}` : "Google Workspace connected");
 
       const cleanUrl = new URL(window.location.href);
-      [
-        "connected",
-        "google",
-        "email",
-        "accessToken",
-        "refreshToken",
-        "tokenExpiry",
-      ].forEach((key) => cleanUrl.searchParams.delete(key));
+      GOOGLE_OAUTH_QUERY_KEYS.forEach((key) => cleanUrl.searchParams.delete(key));
       window.history.replaceState({}, "", cleanUrl.toString());
       return;
     }
@@ -173,22 +127,14 @@ export function IntegrationsClient() {
   }
 
   function clearGoogleState(message: string) {
-    const nextSettings = createDisconnectedSettings(settings.fromName);
+    const nextSettings = createDisconnectedEmailSettings(settings.fromName);
     setSettings(nextSettings);
     saveEmailSettings(nextSettings);
     window.localStorage.removeItem("assetlift-google-workspace-oauth");
     setResult(message);
 
     const cleanUrl = new URL(window.location.href);
-    [
-      "connected",
-      "google",
-      "email",
-      "accessToken",
-      "refreshToken",
-      "tokenExpiry",
-      "google_error",
-    ].forEach((key) => cleanUrl.searchParams.delete(key));
+    GOOGLE_OAUTH_QUERY_KEYS.forEach((key) => cleanUrl.searchParams.delete(key));
     window.history.replaceState({}, "", cleanUrl.toString());
   }
 
@@ -262,7 +208,7 @@ export function IntegrationsClient() {
                     reconnectGoogleWorkspace();
                     return;
                   }
-                  window.location.href = "/api/google/workspace/start";
+                  window.location.href = "/api/google/workspace/start?returnTo=/integrations";
                 }}
               >
                 {settings.googleConnected ? "Reconnect Google Workspace" : "Connect Google Workspace"}

@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RefreshCw, Send } from "lucide-react";
 import { useCrm } from "@/components/crm/crm-provider";
 import { Badge, Card, SectionHeader } from "@/components/ui/primitives";
+import {
+  buildConnectedGoogleSettings,
+  GOOGLE_OAUTH_QUERY_KEYS,
+} from "@/lib/google-workspace-client";
 
 export function InboxClient() {
   const { addInboxThread, emailSettings, inboxThreads, replaceInboxThreads, saveEmailSettings } = useCrm();
@@ -15,6 +19,31 @@ export function InboxClient() {
   const [syncing, setSyncing] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nextSettings = buildConnectedGoogleSettings(emailSettings, params);
+    if (!nextSettings) {
+      const error = params.get("google_error");
+      if (error) {
+        setResult(
+          error === "token_exchange_failed"
+            ? "Google sign-in completed, but token exchange failed."
+            : `Google connection failed: ${error}`
+        );
+      }
+      return;
+    }
+
+    saveEmailSettings(nextSettings);
+    setResult(
+      nextSettings.googleEmail ? `Connected as ${nextSettings.googleEmail}` : "Google Workspace connected"
+    );
+
+    const cleanUrl = new URL(window.location.href);
+    GOOGLE_OAUTH_QUERY_KEYS.forEach((key) => cleanUrl.searchParams.delete(key));
+    window.history.replaceState({}, "", cleanUrl.toString());
+  }, [emailSettings, saveEmailSettings]);
 
   async function refreshGoogleToken() {
     if (
@@ -133,8 +162,19 @@ export function InboxClient() {
           <p>
             {emailSettings.googleConnected
               ? "Inbox sync and send now run through the connected Google Workspace mailbox."
-              : "Connect Google Workspace in Integrations before syncing or sending email from the CRM."}
+              : "Connect Google Workspace here, then sync and send directly from the CRM inbox."}
           </p>
+          <div className="pill-row" style={{ marginTop: 14 }}>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => {
+                window.location.href = "/api/google/workspace/start?returnTo=/inbox";
+              }}
+            >
+              {emailSettings.googleConnected ? "Reconnect in inbox" : "Connect Google Workspace"}
+            </button>
+          </div>
         </div>
         <div className="pill-row" style={{ marginBottom: 18 }}>
           <button
