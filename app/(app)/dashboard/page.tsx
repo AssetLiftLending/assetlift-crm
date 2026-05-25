@@ -5,9 +5,9 @@ export default function DashboardPage() {
   return (
     <div className="module-grid">
       <PageHead
-        badge="Command center"
-        title="Operating view across leads, lenders, and closings"
-        description="The dashboard now runs off shared CRM state instead of a static marketing-style mock."
+        badge="Overview"
+        title="Simple CRM process"
+        description="Start with a contact, move qualified files into deals, then track communication and follow-up."
       />
       <DashboardClient />
     </div>

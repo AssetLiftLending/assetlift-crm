@@ -28,8 +28,8 @@ export function Sidebar() {
     <aside className="sidebar">
       <div className="brand-block">
         <span className="brand-kicker">AssetLift CRM</span>
-        <h1>Capital Ops</h1>
-        <p>Built for borrower intake, lender routing, and funding visibility.</p>
+        <h1>Pipeline</h1>
+        <p>Keep real contacts, real deals, and real next steps in one place.</p>
       </div>
 
       <nav className="nav-list">
@@ -42,8 +42,8 @@ export function Sidebar() {
       </nav>
 
       <div className="sidebar-footer">
-        <p>Target build</p>
-        <strong>Genie Rocket-style feature parity + AssetLift lending ops</strong>
+        <p>Recommended flow</p>
+        <strong>Contacts, deals, inbox, calendar</strong>
       </div>
     </aside>
   );

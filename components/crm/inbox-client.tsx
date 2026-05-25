@@ -17,31 +17,38 @@ export function InboxClient() {
     <div className="section-grid two">
       <Card>
         <SectionHeader
-          eyebrow="Open communication"
-          title="Inbox queue"
-          description="This list now updates live from shared CRM state."
+          eyebrow="Step 3"
+          title="Inbox"
+          description="Track only real conversations that need follow-up."
         />
         <div className="mini-list">
-          {inboxThreads.map((thread) => (
-            <div key={thread.id} className="mini-row">
-              <div>
-                <strong>{thread.sender}</strong>
-                <p>{thread.subject}</p>
-                <p>{thread.summary}</p>
+          {inboxThreads.length ? (
+            inboxThreads.map((thread) => (
+              <div key={thread.id} className="mini-row">
+                <div>
+                  <strong>{thread.sender}</strong>
+                  <p>{thread.subject}</p>
+                  <p>{thread.summary}</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <Badge>{thread.status}</Badge>
+                  <p>{thread.age}</p>
+                </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <Badge>{thread.status}</Badge>
-                <p>{thread.age}</p>
-              </div>
+            ))
+          ) : (
+            <div className="empty-panel">
+              <strong>No inbox threads yet</strong>
+              <p>When a message matters to a deal, log it here and then schedule the next action.</p>
             </div>
-          ))}
+          )}
         </div>
       </Card>
 
       <Card>
         <SectionHeader
-          eyebrow="Compose"
-          title="Log or draft a new thread"
+          eyebrow="Log thread"
+          title="Add conversation"
           description={`Configured sender: ${emailSettings.fromEmail || "not set"}`}
         />
         <div className="login-grid">

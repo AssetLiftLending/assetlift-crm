@@ -1,6 +1,6 @@
 import type { Route } from "next";
 import Link from "next/link";
-import { Activity, ArrowUpRight, DollarSign, MessageSquareMore, OctagonAlert, Trophy, Users } from "lucide-react";
+import { Activity, ArrowUpRight, CalendarClock, MessageSquareMore, Users } from "lucide-react";
 import { formatCompact, formatCurrency } from "@/lib/utils";
 
 export function MetricGrid({
@@ -30,39 +30,32 @@ export function MetricGrid({
       detail: "Review borrower leads",
     },
     {
-      label: "Active loans",
+      label: "Deals",
       value: formatCompact(metrics.activeLoans),
       icon: Activity,
       href: "/pipeline",
-      detail: "Manage live files",
-    },
-    {
-      label: "Funded this month",
-      value: formatCompact(metrics.fundedThisMonth),
-      icon: Trophy,
-      href: "/reporting",
-      detail: "Check production pace",
+      detail: "Manage active files",
     },
     {
       label: "Pipeline value",
       value: formatCurrency(metrics.pipelineValue),
-      icon: DollarSign,
+      icon: Activity,
       href: "/pipeline",
-      detail: "Open the pipeline board",
+      detail: "Open pipeline totals",
     },
     {
-      label: "Overdue tasks",
+      label: "Follow-ups",
       value: formatCompact(metrics.overdueTasks),
-      icon: OctagonAlert,
+      icon: CalendarClock,
       href: "/calendar",
-      detail: "Clear follow-ups",
+      detail: "Review scheduled actions",
     },
     {
-      label: "Response SLA",
+      label: "Inbox",
       value: metrics.responseSla,
       icon: MessageSquareMore,
       href: "/inbox",
-      detail: "Jump into conversations",
+      detail: "Open tracked conversations",
     },
   ];
 

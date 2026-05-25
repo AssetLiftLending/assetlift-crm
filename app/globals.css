@@ -329,6 +329,110 @@ input {
   gap: 18px;
 }
 
+.dashboard-hero-simple {
+  padding: 28px 32px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow);
+}
+
+.dashboard-hero-simple h2 {
+  margin: 10px 0 14px;
+  font-size: clamp(2rem, 4vw, 2.9rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.dashboard-hero-simple p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.dashboard-process-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.process-card {
+  display: grid;
+  gap: 10px;
+  min-height: 180px;
+}
+
+.process-step {
+  color: var(--teal);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.process-card strong {
+  font-size: 1.2rem;
+}
+
+.process-card p,
+.empty-panel p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.metric-grid-simple {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.empty-panel {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.ai-match-panel {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.ai-match-panel p,
+.ai-match-item p,
+.ai-match-disclaimer {
+  color: var(--muted);
+}
+
+.ai-match-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-match-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+}
+
+.ai-match-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.ai-match-questions ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
 .dashboard-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
@@ -688,13 +792,21 @@ input {
 }
 
 .opps-filter-row select,
+.opps-filter-row input,
 .opps-modal-grid input,
-.opps-modal-grid select {
+.opps-modal-grid select,
+.deal-stage-select {
   min-width: 180px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: white;
   padding: 12px 14px;
+}
+
+.deal-stage-select {
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px;
 }
 
 .opps-stage-strip {
@@ -877,6 +989,7 @@ input {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .dashboard-process-grid,
   .section-grid.two,
   .hero-grid,
   .dashboard-hero {
@@ -908,6 +1021,8 @@ input {
 
   .metric-grid,
   .section-grid.three,
+  .metric-grid-simple,
+  .dashboard-process-grid,
   .dashboard-hero-stats {
     grid-template-columns: 1fr;
   }

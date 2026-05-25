@@ -1,18 +1,31 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CirclePlus, Filter, Goal, MoveRight, Search, SlidersHorizontal, X } from "lucide-react";
+import { CirclePlus, MoveRight, Sparkles, X } from "lucide-react";
 import { useCrm } from "@/components/crm/crm-provider";
 import { Badge, Card, SectionHeader } from "@/components/ui/primitives";
-import { formatCompact, formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+
+type LenderMatchResult = {
+  summary: string;
+  disclaimer: string;
+  matches: Array<{
+    profile: string;
+    fit: "High" | "Medium" | "Low";
+    reason: string;
+    watchouts: string[];
+  }>;
+  nextQuestions: string[];
+};
 
 export function PipelineClient() {
   const { addDeal, deals, moveDealToStage, pipelineStages, updateDealStatus } = useCrm();
-  const [search, setSearch] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState<"Open" | "Won" | "Lost" | "All">("Open");
-  const [activeStage, setActiveStage] = useState("All");
   const [showComposer, setShowComposer] = useState(false);
+  const [search, setSearch] = useState("");
+  const [activeAiDealId, setActiveAiDealId] = useState<string | null>(null);
+  const [aiLoadingDealId, setAiLoadingDealId] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string>("");
+  const [aiMatches, setAiMatches] = useState<Record<string, LenderMatchResult>>({});
   const [form, setForm] = useState({
     borrower: "",
     company: "",
@@ -24,55 +37,25 @@ export function PipelineClient() {
     owner: "YL",
     risk: "Medium" as "Low" | "Medium" | "High",
     status: "Open" as "Open" | "Won" | "Lost",
-    source: "Website",
+    source: "Manual",
     nextStep: "",
     expectedClose: "",
     tags: "",
   });
 
-  const owners = useMemo(
-    () => ["All", ...Array.from(new Set(deals.map((deal) => deal.owner)))],
-    [deals]
-  );
-
   const filteredDeals = useMemo(() => {
-    return deals.filter((deal) => {
-      const searchStack = [
-        deal.borrower,
-        deal.company,
-        deal.property,
-        deal.program,
-        deal.source,
-        ...deal.tags,
-      ]
+    const normalized = search.toLowerCase();
+    return deals.filter((deal) =>
+      [deal.borrower, deal.company, deal.property, deal.program, deal.nextStep]
         .join(" ")
-        .toLowerCase();
-
-      const matchesSearch = searchStack.includes(search.toLowerCase());
-      const matchesOwner = ownerFilter === "All" || deal.owner === ownerFilter;
-      const matchesStatus = statusFilter === "All" || deal.status === statusFilter;
-      const matchesStage = activeStage === "All" || deal.stageId === activeStage;
-
-      return matchesSearch && matchesOwner && matchesStatus && matchesStage;
-    });
-  }, [activeStage, deals, ownerFilter, search, statusFilter]);
+        .toLowerCase()
+        .includes(normalized)
+    );
+  }, [deals, search]);
 
   const openDeals = filteredDeals.filter((deal) => deal.status === "Open");
   const wonDeals = filteredDeals.filter((deal) => deal.status === "Won");
   const lostDeals = filteredDeals.filter((deal) => deal.status === "Lost");
-
-  const weightedValue = openDeals.reduce((sum, deal) => {
-    const stage = pipelineStages.find((item) => item.id === deal.stageId);
-    return sum + deal.amount * ((stage?.probability ?? 0) / 100);
-  }, 0);
-
-  const averageDealSize = openDeals.length
-    ? Math.round(openDeals.reduce((sum, deal) => sum + deal.amount, 0) / openDeals.length)
-    : 0;
-
-  function stageName(stageId: string) {
-    return pipelineStages.find((stage) => stage.id === stageId)?.name ?? stageId;
-  }
 
   function submitDeal() {
     if (!form.borrower || !form.property || !form.amount) return;
@@ -84,12 +67,12 @@ export function PipelineClient() {
       program: form.program,
       stageId: form.stageId,
       amount: Number(form.amount),
-      lenderFit: form.lenderFit || "Needs lender routing",
+      lenderFit: form.lenderFit,
       owner: form.owner,
       risk: form.risk,
       status: form.status,
       source: form.source,
-      nextStep: form.nextStep || "Schedule borrower follow-up.",
+      nextStep: form.nextStep || "Review and schedule follow-up",
       expectedClose: form.expectedClose || "TBD",
       tags: form.tags
         .split(",")
@@ -108,7 +91,7 @@ export function PipelineClient() {
       owner: "YL",
       risk: "Medium",
       status: "Open",
-      source: "Website",
+      source: "Manual",
       nextStep: "",
       expectedClose: "",
       tags: "",
@@ -116,291 +99,324 @@ export function PipelineClient() {
     setShowComposer(false);
   }
 
+  async function runAiMatch(deal: (typeof deals)[number]) {
+    setAiLoadingDealId(deal.id);
+    setAiError("");
+    setActiveAiDealId(deal.id);
+
+    try {
+      const response = await fetch("/api/ai/lender-match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          borrower: deal.borrower,
+          company: deal.company,
+          property: deal.property,
+          program: deal.program,
+          amount: deal.amount,
+          stage: pipelineStages.find((item) => item.id === deal.stageId)?.name ?? deal.stageId,
+          risk: deal.risk,
+          nextStep: deal.nextStep,
+          expectedClose: deal.expectedClose,
+          lenderFit: deal.lenderFit,
+          source: deal.source,
+          tags: deal.tags,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "AI lender match failed");
+      }
+
+      setAiMatches((current) => ({
+        ...current,
+        [deal.id]: payload,
+      }));
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "AI lender match failed");
+    } finally {
+      setAiLoadingDealId(null);
+    }
+  }
+
   return (
     <div className="opps-shell">
       <Card className="opps-toolbar-card">
         <div className="opps-toolbar-top">
           <div>
-            <span className="eyebrow">Opportunity pipeline</span>
-            <h3 className="opps-title">Operator board for borrower deals, lender routing, and close visibility</h3>
+            <span className="eyebrow">Step 2</span>
+            <h3 className="opps-title">Deals</h3>
             <p className="opps-subtitle">
-              Built to behave like a real opportunities workspace: filter first, scan fast, move cards, and keep won/lost outcomes tracked.
+              Only add real opportunities. Keep each file small: borrower, property, amount, and next step.
             </p>
           </div>
           <div className="opps-toolbar-actions">
-            <button type="button" className="secondary-button opps-action-button">
-              <SlidersHorizontal size={16} />
-              Board settings
-            </button>
             <button
               type="button"
               className="primary-button opps-action-button"
               onClick={() => setShowComposer(true)}
             >
               <CirclePlus size={16} />
-              New opportunity
+              Add deal
             </button>
           </div>
         </div>
 
         <div className="opps-filter-row">
-          <label className="opps-search">
-            <Search size={18} />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search contact, company, property, source, tag, or program"
-            />
-          </label>
-          <select value={ownerFilter} onChange={(event) => setOwnerFilter(event.target.value)}>
-            {owners.map((owner) => (
-              <option key={owner} value={owner}>
-                {owner === "All" ? "All owners" : owner}
-              </option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(event.target.value as "Open" | "Won" | "Lost" | "All")
-            }
-          >
-            <option value="Open">Open opportunities</option>
-            <option value="All">All statuses</option>
-            <option value="Won">Won only</option>
-            <option value="Lost">Lost only</option>
-          </select>
-          <button type="button" className="secondary-button opps-action-button">
-            <Filter size={16} />
-            Advanced filters
-          </button>
-        </div>
-
-        <div className="opps-stage-strip">
-          <button
-            type="button"
-            className={activeStage === "All" ? "opps-stage-chip active" : "opps-stage-chip"}
-            onClick={() => setActiveStage("All")}
-          >
-            All stages
-          </button>
-          {pipelineStages.map((stage) => (
-            <button
-              key={stage.id}
-              type="button"
-              className={activeStage === stage.id ? "opps-stage-chip active" : "opps-stage-chip"}
-              onClick={() => setActiveStage(stage.id)}
-            >
-              {stage.name}
-            </button>
-          ))}
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search borrower, property, or next step"
+          />
         </div>
       </Card>
 
       <div className="opps-summary-grid">
         <Card className="opps-summary-card">
-          <span>Open value</span>
-          <strong>{formatCurrency(openDeals.reduce((sum, deal) => sum + deal.amount, 0))}</strong>
-          <p>{openDeals.length} active opportunities</p>
+          <span>Open deals</span>
+          <strong>{openDeals.length}</strong>
+          <p>{formatCurrency(openDeals.reduce((sum, deal) => sum + deal.amount, 0))}</p>
         </Card>
         <Card className="opps-summary-card">
-          <span>Weighted forecast</span>
-          <strong>{formatCurrency(Math.round(weightedValue))}</strong>
-          <p>Probability adjusted pipeline</p>
+          <span>Won</span>
+          <strong>{wonDeals.length}</strong>
+          <p>Closed deals</p>
         </Card>
         <Card className="opps-summary-card">
-          <span>Average size</span>
-          <strong>{formatCurrency(averageDealSize)}</strong>
-          <p>Average open opportunity amount</p>
-        </Card>
-        <Card className="opps-summary-card">
-          <span>Outcomes</span>
-          <strong>{wonDeals.length} won / {lostDeals.length} lost</strong>
-          <p>Closed-loop pipeline tracking</p>
+          <span>Lost</span>
+          <strong>{lostDeals.length}</strong>
+          <p>Archived deals</p>
         </Card>
       </div>
 
-      <div className="opps-board">
-        {pipelineStages.map((stage) => {
-          const stageDeals = openDeals.filter((deal) => deal.stageId === stage.id);
+      {!deals.length ? (
+        <Card className="empty-panel">
+          <strong>No deals yet</strong>
+          <p>Process: add a contact, create the deal here, log the inbox thread, then schedule the follow-up.</p>
+        </Card>
+      ) : (
+        <div className="opps-board">
+          {pipelineStages.map((stage) => {
+            const stageDeals = openDeals.filter((deal) => deal.stageId === stage.id);
 
-          return (
-            <div key={stage.id} className="opps-column">
-              <div className="opps-column-head" style={{ borderTopColor: stage.accent }}>
-                <div>
-                  <span className="opps-column-label">{stage.name}</span>
-                  <strong>{stageDeals.length} opportunities</strong>
-                </div>
-                <Badge>{formatCompact(stageDeals.reduce((sum, deal) => sum + deal.amount, 0))}</Badge>
-              </div>
-
-              <div className="opps-column-stack">
-                {stageDeals.length === 0 ? (
-                  <div className="opps-empty-column">
-                    <Goal size={16} />
-                    <span>No opportunities</span>
+            return (
+              <div key={stage.id} className="opps-column">
+                <div className="opps-column-head" style={{ borderTopColor: stage.accent }}>
+                  <div>
+                    <span className="opps-column-label">{stage.name}</span>
+                    <strong>{stageDeals.length} deals</strong>
                   </div>
-                ) : null}
+                  <Badge>{formatCurrency(stageDeals.reduce((sum, deal) => sum + deal.amount, 0))}</Badge>
+                </div>
 
-                {stageDeals.map((deal) => {
-                  const stageIndex = pipelineStages.findIndex((item) => item.id === deal.stageId);
-                  const previousStage = pipelineStages[stageIndex - 1];
-                  const nextStage = pipelineStages[stageIndex + 1];
+                <div className="opps-column-stack">
+                  {stageDeals.length ? (
+                    stageDeals.map((deal) => {
+                      const stageIndex = pipelineStages.findIndex((item) => item.id === deal.stageId);
+                      const nextStage = pipelineStages[stageIndex + 1];
 
-                  return (
-                    <Card key={deal.id} className="opps-card">
-                      <div className="opps-card-head">
-                        <div>
-                          <strong>{deal.borrower}</strong>
-                          <p>{deal.company}</p>
-                        </div>
-                        <strong>{formatCurrency(deal.amount)}</strong>
-                      </div>
+                      return (
+                        <Card key={deal.id} className="opps-card">
+                          <div className="opps-card-head">
+                            <div>
+                              <strong>{deal.borrower}</strong>
+                              <p>{deal.company}</p>
+                            </div>
+                            <strong>{formatCurrency(deal.amount)}</strong>
+                          </div>
 
-                      <p className="opps-card-property">{deal.property}</p>
+                          <p className="opps-card-property">{deal.property}</p>
 
-                      <div className="pill-row">
-                        <Badge>{deal.program}</Badge>
-                        <Badge>{deal.owner}</Badge>
-                        <Badge>{deal.source}</Badge>
-                      </div>
+                          <div className="opps-card-meta">
+                            <div>
+                              <span>Program</span>
+                              <strong>{deal.program}</strong>
+                            </div>
+                            <div>
+                              <span>Stage</span>
+                              <select
+                                value={deal.stageId}
+                                className="deal-stage-select"
+                                onChange={(event) => moveDealToStage(deal.id, event.target.value)}
+                              >
+                                {pipelineStages.map((stageOption) => (
+                                  <option key={stageOption.id} value={stageOption.id}>
+                                    {stageOption.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
 
-                      <div className="opps-card-meta">
-                        <div>
-                          <span>Next action</span>
-                          <strong>{deal.nextStep}</strong>
-                        </div>
-                        <div>
-                          <span>Expected close</span>
-                          <strong>{deal.expectedClose}</strong>
-                        </div>
-                      </div>
+                          <div className="opps-card-meta">
+                            <div>
+                              <span>Next step</span>
+                              <strong>{deal.nextStep || "Not set"}</strong>
+                            </div>
+                            <div>
+                              <span>Status</span>
+                              <strong>{deal.status}</strong>
+                            </div>
+                          </div>
 
-                      <div className="opps-card-meta">
-                        <div>
-                          <span>Lender fit</span>
-                          <strong>{deal.lenderFit}</strong>
-                        </div>
-                        <div>
-                          <span>Risk</span>
-                          <strong className={`risk-${deal.risk.toLowerCase()}`}>{deal.risk}</strong>
-                        </div>
-                      </div>
+                          <div className="opps-card-footer">
+                            <span>{deal.expectedClose}</span>
+                            <div className="opps-card-actions">
+                              <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={() => runAiMatch(deal)}
+                                disabled={aiLoadingDealId === deal.id}
+                              >
+                                <Sparkles size={14} />
+                                {aiLoadingDealId === deal.id ? "Matching..." : "AI lender match"}
+                              </button>
+                              {nextStage ? (
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  onClick={() => moveDealToStage(deal.id, nextStage.id)}
+                                >
+                                  <MoveRight size={14} />
+                                  Next stage
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={() => updateDealStatus(deal.id, "Won")}
+                              >
+                                Funded
+                              </button>
+                              <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={() => updateDealStatus(deal.id, "Lost")}
+                              >
+                                Lost
+                              </button>
+                            </div>
+                          </div>
 
-                      <div className="opps-tag-row">
-                        {deal.tags.map((tag) => (
-                          <span key={tag} className="opps-tag">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="opps-card-footer">
-                        <span>{deal.lastActivity}</span>
-                        <div className="opps-card-actions">
-                          {previousStage ? (
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              onClick={() => moveDealToStage(deal.id, previousStage.id)}
-                            >
-                              Back
-                            </button>
+                          {activeAiDealId === deal.id ? (
+                            aiMatches[deal.id] ? (
+                              <div className="ai-match-panel">
+                                <strong>AI lender match</strong>
+                                <p>{aiMatches[deal.id].summary}</p>
+                                <div className="ai-match-list">
+                                  {aiMatches[deal.id].matches.map((match) => (
+                                    <div key={`${deal.id}-${match.profile}`} className="ai-match-item">
+                                      <div className="ai-match-head">
+                                        <strong>{match.profile}</strong>
+                                        <Badge>{match.fit} fit</Badge>
+                                      </div>
+                                      <p>{match.reason}</p>
+                                      {match.watchouts.length ? (
+                                        <p>Watchouts: {match.watchouts.join(", ")}</p>
+                                      ) : null}
+                                    </div>
+                                  ))}
+                                </div>
+                                {aiMatches[deal.id].nextQuestions.length ? (
+                                  <div className="ai-match-questions">
+                                    <strong>What to confirm next</strong>
+                                    <ul>
+                                      {aiMatches[deal.id].nextQuestions.map((question) => (
+                                        <li key={question}>{question}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : null}
+                                <p className="ai-match-disclaimer">{aiMatches[deal.id].disclaimer}</p>
+                              </div>
+                            ) : aiError ? (
+                              <div className="empty-panel">
+                                <strong>AI match unavailable</strong>
+                                <p>{aiError}</p>
+                              </div>
+                            ) : null
                           ) : null}
-                          {nextStage ? (
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              onClick={() => moveDealToStage(deal.id, nextStage.id)}
-                            >
-                              <MoveRight size={14} />
-                              Move
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="secondary-button"
-                            onClick={() => updateDealStatus(deal.id, "Won")}
-                          >
-                            Won
-                          </button>
-                          <button
-                            type="button"
-                            className="secondary-button"
-                            onClick={() => updateDealStatus(deal.id, "Lost")}
-                          >
-                            Lost
-                          </button>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
+                        </Card>
+                      );
+                    })
+                  ) : (
+                    <div className="opps-empty-column">
+                      <span>No deals</span>
+                    </div>
+                  )}
+                </div>
               </div>
+            );
+          })}
+        </div>
+      )}
+
+      {(wonDeals.length || lostDeals.length) ? (
+        <div className="section-grid two">
+          <Card>
+            <SectionHeader eyebrow="Closed" title="Won deals" description="Deals you marked as won." />
+            <div className="mini-list">
+              {wonDeals.length ? (
+                wonDeals.map((deal) => (
+                  <div key={deal.id} className="mini-row">
+                    <div>
+                      <strong>{deal.borrower}</strong>
+                      <p>{deal.property}</p>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <strong>{formatCurrency(deal.amount)}</strong>
+                      <p>{deal.expectedClose}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="empty-panel">
+                  <strong>No won deals yet</strong>
+                </div>
+              )}
             </div>
-          );
-        })}
-      </div>
+          </Card>
 
-      <div className="section-grid two">
-        <Card>
-          <SectionHeader
-            eyebrow="Won opportunities"
-            title="Closed and converted"
-            description="Keep funded deals visible instead of dropping them out of the workflow."
-          />
-          <div className="mini-list">
-            {wonDeals.map((deal) => (
-              <div key={deal.id} className="mini-row">
-                <div>
-                  <strong>{deal.borrower}</strong>
-                  <p>{deal.property}</p>
+          <Card>
+            <SectionHeader eyebrow="Archive" title="Lost deals" description="Deals you marked as lost." />
+            <div className="mini-list">
+              {lostDeals.length ? (
+                lostDeals.map((deal) => (
+                  <div key={deal.id} className="mini-row">
+                    <div>
+                      <strong>{deal.borrower}</strong>
+                      <p>{deal.nextStep}</p>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <strong>{deal.source}</strong>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => updateDealStatus(deal.id, "Open")}
+                      >
+                        Reopen
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="empty-panel">
+                  <strong>No lost deals yet</strong>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <strong>{formatCurrency(deal.amount)}</strong>
-                  <p>{stageName(deal.stageId)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card>
-          <SectionHeader
-            eyebrow="Lost opportunities"
-            title="Recovery queue"
-            description="Lost files stay searchable and can be reopened into the board."
-          />
-          <div className="mini-list">
-            {lostDeals.map((deal) => (
-              <div key={deal.id} className="mini-row">
-                <div>
-                  <strong>{deal.borrower}</strong>
-                  <p>{deal.nextStep}</p>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <strong>{deal.source}</strong>
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => updateDealStatus(deal.id, "Open")}
-                  >
-                    Reopen
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      ) : null}
 
       {showComposer ? (
         <div className="opps-modal-backdrop" onClick={() => setShowComposer(false)}>
           <div className="opps-modal" onClick={(event) => event.stopPropagation()}>
             <div className="opps-modal-head">
               <div>
-                <span className="eyebrow">New opportunity</span>
-                <h3>Add a borrower file to the pipeline</h3>
+                <span className="eyebrow">New deal</span>
+                <h3>Add a real opportunity</h3>
               </div>
               <button type="button" className="icon-button" onClick={() => setShowComposer(false)}>
                 <X size={16} />
@@ -447,42 +463,15 @@ export function PipelineClient() {
                   </option>
                 ))}
               </select>
-              <select
-                value={form.owner}
-                onChange={(event) => setForm((current) => ({ ...current, owner: event.target.value }))}
-              >
-                {owners
-                  .filter((owner) => owner !== "All")
-                  .map((owner) => (
-                    <option key={owner} value={owner}>
-                      {owner}
-                    </option>
-                  ))}
-              </select>
-              <input
-                value={form.source}
-                onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))}
-                placeholder="Lead source"
-              />
               <input
                 value={form.nextStep}
                 onChange={(event) => setForm((current) => ({ ...current, nextStep: event.target.value }))}
-                placeholder="Next action"
+                placeholder="Next step"
               />
               <input
                 value={form.expectedClose}
                 onChange={(event) => setForm((current) => ({ ...current, expectedClose: event.target.value }))}
                 placeholder="Expected close"
-              />
-              <input
-                value={form.lenderFit}
-                onChange={(event) => setForm((current) => ({ ...current, lenderFit: event.target.value }))}
-                placeholder="Lender fit"
-              />
-              <input
-                value={form.tags}
-                onChange={(event) => setForm((current) => ({ ...current, tags: event.target.value }))}
-                placeholder="Tags separated by commas"
               />
             </div>
 
@@ -491,7 +480,7 @@ export function PipelineClient() {
                 Cancel
               </button>
               <button type="button" className="primary-button" onClick={submitDeal}>
-                Create opportunity
+                Save deal
               </button>
             </div>
           </div>

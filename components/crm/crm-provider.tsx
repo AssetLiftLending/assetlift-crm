@@ -66,8 +66,9 @@ type CrmContextValue = CrmState & {
   saveEmailSettings: (settings: EmailIntegrationSettings) => void;
 };
 
-const STORAGE_KEY = "assetlift-crm-state-v2";
+const STORAGE_KEY = "assetlift-crm-state-v3";
 const LEGACY_STORAGE_KEY = "assetlift-crm-state-v1";
+const PREVIOUS_STORAGE_KEY = "assetlift-crm-state-v2";
 
 const defaultState: CrmState = {
   contacts: initialContacts,
@@ -79,6 +80,25 @@ const defaultState: CrmState = {
   integrations: initialIntegrations,
   documentWorkflows: initialDocumentWorkflows,
   emailSettings: defaultEmailIntegrationSettings,
+};
+
+const EMPTY_DEAL: DealRecord = {
+  id: "",
+  borrower: "",
+  company: "",
+  property: "",
+  program: "Bridge",
+  stageId: initialPipelineStages[0]?.id ?? "new-lead",
+  amount: 0,
+  lenderFit: "",
+  owner: "",
+  risk: "Medium",
+  status: "Open",
+  source: "",
+  nextStep: "",
+  lastActivity: "",
+  expectedClose: "",
+  tags: [],
 };
 
 const CrmContext = createContext<CrmContextValue | null>(null);
@@ -93,11 +113,11 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function normalizeDeals(value: unknown): DealRecord[] {
   if (!Array.isArray(value)) {
-    return initialDeals;
+    return defaultState.deals;
   }
 
   return value.map((item, index) => {
-    const fallback = initialDeals[index % initialDeals.length];
+    const fallback = initialDeals[index] ?? EMPTY_DEAL;
     if (!isObject(item)) {
       return fallback;
     }
@@ -143,8 +163,41 @@ function normalizeDeals(value: unknown): DealRecord[] {
   });
 }
 
-function normalizeLoadedState(raw: unknown): CrmState {
+function containsSeedData(raw: unknown) {
   if (!isObject(raw)) {
+    return false;
+  }
+
+  const knownNames = new Set([
+    "Michael Torres",
+    "Sarah Mitchell",
+    "Jason Cole",
+    "Nina Patel",
+    "Robert Fields",
+    "Olivia Green",
+    "Brian Lewis",
+    "Emily Foster",
+  ]);
+
+  const hasSeedContact =
+    Array.isArray(raw.contacts) &&
+    raw.contacts.some((item) => isObject(item) && typeof item.name === "string" && knownNames.has(item.name));
+  const hasSeedDeal =
+    Array.isArray(raw.deals) &&
+    raw.deals.some(
+      (item) => isObject(item) && typeof item.borrower === "string" && knownNames.has(item.borrower)
+    );
+  const hasSeedThread =
+    Array.isArray(raw.inboxThreads) &&
+    raw.inboxThreads.some(
+      (item) => isObject(item) && typeof item.sender === "string" && knownNames.has(item.sender)
+    );
+
+  return hasSeedContact || hasSeedDeal || hasSeedThread;
+}
+
+function normalizeLoadedState(raw: unknown): CrmState {
+  if (!isObject(raw) || containsSeedData(raw)) {
     return defaultState;
   }
 
@@ -183,9 +236,11 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     try {
       const raw =
         window.localStorage.getItem(STORAGE_KEY) ??
+        window.localStorage.getItem(PREVIOUS_STORAGE_KEY) ??
         window.localStorage.getItem(LEGACY_STORAGE_KEY);
       if (raw) {
         setState(normalizeLoadedState(JSON.parse(raw)));
+        window.localStorage.removeItem(PREVIOUS_STORAGE_KEY);
         window.localStorage.removeItem(LEGACY_STORAGE_KEY);
       }
     } catch {
@@ -206,10 +261,10 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     const metrics = {
       openLeads: state.contacts.length,
       activeLoans: openDeals.length,
-      fundedThisMonth: fundedDeals.length || initialMetrics.fundedThisMonth,
+      fundedThisMonth: fundedDeals.length,
       pipelineValue: openDeals.reduce((sum, deal) => sum + deal.amount, 0),
       overdueTasks: state.calendarItems.length,
-      responseSla: initialMetrics.responseSla,
+      responseSla: state.inboxThreads.length ? "Active" : initialMetrics.responseSla,
     };
 
     return {
@@ -266,7 +321,19 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         setState((current) => ({
           ...current,
           deals: current.deals.map((deal) =>
-            deal.id === id ? { ...deal, stageId, lastActivity: "Just now" } : deal
+            deal.id === id
+              ? {
+                  ...deal,
+                  stageId,
+                  status:
+                    stageId === "funded"
+                      ? "Won"
+                      : stageId === "lost"
+                        ? "Lost"
+                        : "Open",
+                  lastActivity: "Just now",
+                }
+              : deal
           ),
           activities: [
             {
@@ -288,6 +355,12 @@ export function CrmProvider({ children }: { children: ReactNode }) {
               ? {
                   ...deal,
                   status,
+                  stageId:
+                    status === "Won"
+                      ? "funded"
+                      : status === "Lost"
+                        ? "lost"
+                        : deal.stageId,
                   lastActivity: "Just now",
                   expectedClose:
                     status === "Won" ? "Closed" : status === "Lost" ? "Lost" : deal.expectedClose,
