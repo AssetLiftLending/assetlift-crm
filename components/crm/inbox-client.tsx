@@ -153,7 +153,7 @@ export function InboxClient() {
           ) : (
             <div className="empty-panel">
               <strong>No synced messages yet</strong>
-              <p>Connect Google Workspace, then sync the inbox to bring real messages into the CRM.</p>
+              <p>Connect Google Workspace, then sync the inbox to bring real messages into the CRM. If sync says permission is missing, reconnect Google Workspace once.</p>
             </div>
           )}
         </div>

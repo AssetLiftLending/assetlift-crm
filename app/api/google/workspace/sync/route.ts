@@ -50,8 +50,14 @@ export async function POST(request: Request) {
 
     if (!listResponse.ok) {
       const payload = await listResponse.json().catch(() => ({}));
+      const message = payload?.error?.message || "Gmail inbox sync failed.";
       return NextResponse.json(
-        { error: payload?.error?.message || "Gmail inbox sync failed." },
+        {
+          error:
+            message.toLowerCase().includes("insufficient")
+              ? "Google Workspace inbox permission is missing. Reconnect Google Workspace and approve inbox access."
+              : message,
+        },
         { status: 502 }
       );
     }
