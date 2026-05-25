@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { mapGoogleWorkspaceError } from "@/lib/google-workspace-errors";
 
 type GmailListResponse = {
   messages?: Array<{ id: string; threadId: string }>;
@@ -50,14 +51,12 @@ export async function POST(request: Request) {
 
     if (!listResponse.ok) {
       const payload = await listResponse.json().catch(() => ({}));
-      const message = payload?.error?.message || "Gmail inbox sync failed.";
+      const message = mapGoogleWorkspaceError(
+        payload?.error?.message || "Gmail inbox sync failed.",
+        "sync"
+      );
       return NextResponse.json(
-        {
-          error:
-            message.toLowerCase().includes("insufficient")
-              ? "Google Workspace inbox permission is missing. Reconnect Google Workspace and approve inbox access."
-              : message,
-        },
+        { error: message },
         { status: 502 }
       );
     }

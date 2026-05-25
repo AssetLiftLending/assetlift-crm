@@ -124,6 +124,18 @@ export function InboxClient() {
           title="Inbox"
           description="Sync Gmail threads and keep active deal conversations visible."
         />
+        <div className="empty-panel" style={{ marginBottom: 18 }}>
+          <strong>
+            {emailSettings.googleConnected
+              ? `Connected as ${emailSettings.googleEmail || emailSettings.fromEmail || "your mailbox"}`
+              : "Google Workspace not connected"}
+          </strong>
+          <p>
+            {emailSettings.googleConnected
+              ? "Inbox sync and send now run through the connected Google Workspace mailbox."
+              : "Connect Google Workspace in Integrations before syncing or sending email from the CRM."}
+          </p>
+        </div>
         <div className="pill-row" style={{ marginBottom: 18 }}>
           <button
             type="button"
@@ -192,7 +204,7 @@ export function InboxClient() {
             <Send size={16} />
             {sending ? "Sending..." : "Send email"}
           </button>
-          {result ? <p>{result}</p> : null}
+          {result ? <p><strong>Status:</strong> {result}</p> : null}
         </div>
       </Card>
     </div>

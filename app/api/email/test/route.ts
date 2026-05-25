@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { mapGoogleWorkspaceError } from "@/lib/google-workspace-errors";
 
 export async function POST(request: Request) {
   try {
@@ -38,9 +39,11 @@ export async function POST(request: Request) {
         const payload = await gmailResponse.json().catch(() => ({}));
         return NextResponse.json(
           {
-            error:
+            error: mapGoogleWorkspaceError(
               payload?.error?.message ||
-              "Google Workspace send failed. Reconnect the mailbox and try again.",
+                "Google Workspace send failed. Reconnect the mailbox and try again.",
+              "send"
+            ),
           },
           { status: 502 }
         );

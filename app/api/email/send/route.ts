@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { mapGoogleWorkspaceError } from "@/lib/google-workspace-errors";
 
 export async function POST(request: Request) {
   try {
@@ -45,7 +46,12 @@ export async function POST(request: Request) {
     if (!gmailResponse.ok) {
       const payload = await gmailResponse.json().catch(() => ({}));
       return NextResponse.json(
-        { error: payload?.error?.message || "Google Workspace send failed." },
+        {
+          error: mapGoogleWorkspaceError(
+            payload?.error?.message || "Google Workspace send failed.",
+            "send"
+          ),
+        },
         { status: 502 }
       );
     }

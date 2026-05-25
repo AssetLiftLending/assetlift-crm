@@ -12,6 +12,10 @@ export function IntegrationsClient() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
+    setSettings(emailSettings);
+  }, [emailSettings]);
+
+  useEffect(() => {
     const raw = window.localStorage.getItem("assetlift-google-workspace-oauth");
     if (!raw) return;
 
@@ -26,6 +30,24 @@ export function IntegrationsClient() {
       // Ignore malformed local payloads.
     }
   }, [saveEmailSettings, settings]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("google");
+    const error = params.get("google_error");
+    if (connected === "connected" && settings.googleConnected) {
+      setResult(settings.googleEmail ? `Connected as ${settings.googleEmail}` : "Google Workspace connected");
+      return;
+    }
+
+    if (error) {
+      setResult(
+        error === "token_exchange_failed"
+          ? "Google sign-in completed, but token exchange failed."
+          : `Google connection failed: ${error}`
+      );
+    }
+  }, [settings.googleConnected, settings.googleEmail]);
 
   async function getFreshGoogleSettings() {
     if (
@@ -136,6 +158,11 @@ export function IntegrationsClient() {
             <p>
               Password-based Gmail setup is no longer the right default for Workspace. Connect the mailbox through Google sign-in instead.
             </p>
+            {settings.googleConnected ? (
+              <p>
+                From email: <strong>{settings.fromEmail || settings.googleEmail}</strong>
+              </p>
+            ) : null}
             <button
               type="button"
               className="primary-button"
@@ -150,14 +177,18 @@ export function IntegrationsClient() {
           <input value={settings.providerLabel} onChange={(e) => setSettings({ ...settings, providerLabel: e.target.value })} placeholder="Provider label" />
           <input value={settings.fromName} onChange={(e) => setSettings({ ...settings, fromName: e.target.value })} placeholder="From name" />
           <input value={settings.fromEmail} onChange={(e) => setSettings({ ...settings, fromEmail: e.target.value })} placeholder="From email" />
-          <input value={settings.smtpHost} onChange={(e) => setSettings({ ...settings, smtpHost: e.target.value })} placeholder="SMTP host" />
-          <input value={settings.smtpPort} onChange={(e) => setSettings({ ...settings, smtpPort: e.target.value })} placeholder="SMTP port" />
-          <input value={settings.smtpUser} onChange={(e) => setSettings({ ...settings, smtpUser: e.target.value })} placeholder="SMTP username" />
-          <input value={settings.smtpPass} onChange={(e) => setSettings({ ...settings, smtpPass: e.target.value })} placeholder="SMTP password or app password" />
-          <input value={settings.imapHost} onChange={(e) => setSettings({ ...settings, imapHost: e.target.value })} placeholder="IMAP host" />
-          <input value={settings.imapPort} onChange={(e) => setSettings({ ...settings, imapPort: e.target.value })} placeholder="IMAP port" />
-          <input value={settings.imapUser} onChange={(e) => setSettings({ ...settings, imapUser: e.target.value })} placeholder="IMAP username" />
-          <input value={settings.imapPass} onChange={(e) => setSettings({ ...settings, imapPass: e.target.value })} placeholder="IMAP password or app password" />
+          {!settings.googleConnected ? (
+            <>
+              <input value={settings.smtpHost} onChange={(e) => setSettings({ ...settings, smtpHost: e.target.value })} placeholder="SMTP host" />
+              <input value={settings.smtpPort} onChange={(e) => setSettings({ ...settings, smtpPort: e.target.value })} placeholder="SMTP port" />
+              <input value={settings.smtpUser} onChange={(e) => setSettings({ ...settings, smtpUser: e.target.value })} placeholder="SMTP username" />
+              <input value={settings.smtpPass} onChange={(e) => setSettings({ ...settings, smtpPass: e.target.value })} placeholder="SMTP password or app password" />
+              <input value={settings.imapHost} onChange={(e) => setSettings({ ...settings, imapHost: e.target.value })} placeholder="IMAP host" />
+              <input value={settings.imapPort} onChange={(e) => setSettings({ ...settings, imapPort: e.target.value })} placeholder="IMAP port" />
+              <input value={settings.imapUser} onChange={(e) => setSettings({ ...settings, imapUser: e.target.value })} placeholder="IMAP username" />
+              <input value={settings.imapPass} onChange={(e) => setSettings({ ...settings, imapPass: e.target.value })} placeholder="IMAP password or app password" />
+            </>
+          ) : null}
           <button type="button" className="primary-button" onClick={() => saveEmailSettings(settings)}>
             Save email settings
           </button>
@@ -165,7 +196,7 @@ export function IntegrationsClient() {
           <button type="button" className="secondary-button" onClick={sendTestEmail} disabled={sending || !settings.googleConnected}>
             {sending ? "Sending..." : "Send test email"}
           </button>
-          {result ? <p>{result}</p> : null}
+          {result ? <p><strong>Status:</strong> {result}</p> : null}
         </div>
       </Card>
     </div>
