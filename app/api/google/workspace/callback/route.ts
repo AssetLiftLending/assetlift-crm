@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { GOOGLE_WORKSPACE_COOKIE } from "@/lib/google-workspace-client";
 
 type GoogleTokenResponse = {
   access_token: string;
@@ -72,15 +73,36 @@ export async function GET(request: Request) {
 
   const user = userResponse.ok ? ((await userResponse.json()) as GoogleUserInfo) : {};
   const appRedirect = new URL(returnTo, origin);
-  appRedirect.searchParams.set("connected", "true");
   appRedirect.searchParams.set("google", "connected");
-  appRedirect.searchParams.set("email", user.email || "");
-  appRedirect.searchParams.set("accessToken", tokens.access_token);
-  appRedirect.searchParams.set("refreshToken", tokens.refresh_token || "");
-  appRedirect.searchParams.set(
-    "tokenExpiry",
-    String(Date.now() + tokens.expires_in * 1000)
+  const response = NextResponse.redirect(appRedirect);
+  response.cookies.set(
+    GOOGLE_WORKSPACE_COOKIE,
+    encodeURIComponent(
+      JSON.stringify({
+        googleConnected: true,
+        googleEmail: user.email || "",
+        googleAccessToken: tokens.access_token,
+        googleRefreshToken: tokens.refresh_token || "",
+        googleTokenExpiry: Date.now() + tokens.expires_in * 1000,
+        providerLabel: "Google Workspace",
+        fromEmail: user.email || "",
+        fromName: "AssetLift Lending",
+        smtpHost: "smtp.gmail.com",
+        smtpPort: "587",
+        smtpSecure: false,
+        smtpUser: user.email || "",
+        imapHost: "imap.gmail.com",
+        imapPort: "993",
+        imapUser: user.email || "",
+      })
+    ),
+    {
+      path: "/",
+      sameSite: "lax",
+      secure: true,
+      maxAge: 60 * 5,
+    }
   );
 
-  return NextResponse.redirect(appRedirect);
+  return response;
 }

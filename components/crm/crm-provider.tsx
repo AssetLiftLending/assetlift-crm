@@ -31,6 +31,10 @@ import {
   type IntegrationItem,
   type PipelineStageDefinition,
 } from "@/lib/mock-data";
+import {
+  GOOGLE_WORKSPACE_COOKIE,
+  parseGoogleWorkspaceCookie,
+} from "@/lib/google-workspace-client";
 
 type CrmState = {
   contacts: ContactRecord[];
@@ -235,12 +239,31 @@ export function CrmProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
+      const cookieMatch = document.cookie
+        .split("; ")
+        .find((entry) => entry.startsWith(`${GOOGLE_WORKSPACE_COOKIE}=`));
+      const cookiePayload = parseGoogleWorkspaceCookie(cookieMatch?.split("=").slice(1).join("="));
       const raw =
         window.localStorage.getItem(STORAGE_KEY) ??
         window.localStorage.getItem(PREVIOUS_STORAGE_KEY) ??
         window.localStorage.getItem(LEGACY_STORAGE_KEY);
+      const loadedState = raw ? normalizeLoadedState(JSON.parse(raw)) : defaultState;
+      const nextState =
+        cookiePayload && Object.keys(cookiePayload).length
+          ? {
+              ...loadedState,
+              emailSettings: {
+                ...loadedState.emailSettings,
+                ...cookiePayload,
+              },
+            }
+          : loadedState;
+
+      setState(nextState);
+      if (cookiePayload) {
+        document.cookie = `${GOOGLE_WORKSPACE_COOKIE}=; Max-Age=0; path=/; SameSite=Lax; Secure`;
+      }
       if (raw) {
-        setState(normalizeLoadedState(JSON.parse(raw)));
         window.localStorage.removeItem(PREVIOUS_STORAGE_KEY);
         window.localStorage.removeItem(LEGACY_STORAGE_KEY);
       }

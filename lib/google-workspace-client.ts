@@ -1,5 +1,6 @@
 import type { EmailIntegrationSettings } from "@/lib/mock-data";
 
+export const GOOGLE_WORKSPACE_COOKIE = "assetlift_google_workspace_oauth";
 export const GOOGLE_OAUTH_QUERY_KEYS = [
   "connected",
   "google",
@@ -62,4 +63,16 @@ export function buildConnectedGoogleSettings(
     imapPort: "993",
     imapUser: email,
   };
+}
+
+export function parseGoogleWorkspaceCookie(cookieValue: string | undefined | null) {
+  if (!cookieValue) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(decodeURIComponent(cookieValue)) as Partial<EmailIntegrationSettings>;
+  } catch {
+    return null;
+  }
 }
