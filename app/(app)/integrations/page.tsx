@@ -7,7 +7,7 @@ export default function IntegrationsPage() {
       <PageHead
         badge="Integrations"
         title="Connected systems and mailbox setup"
-        description="Integration statuses persist now, and email settings plus test-send are wired into the app."
+        description="Use Google Workspace OAuth for mailbox access, then test send directly from the connected account."
       />
       <IntegrationsClient />
     </div>

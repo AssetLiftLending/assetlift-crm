@@ -101,6 +101,11 @@ export type EmailIntegrationSettings = {
   imapPort: string;
   imapUser: string;
   imapPass: string;
+  googleConnected?: boolean;
+  googleEmail?: string;
+  googleAccessToken?: string;
+  googleRefreshToken?: string;
+  googleTokenExpiry?: number;
 };
 
 export const pipelineStages: PipelineStageDefinition[] = [
@@ -206,6 +211,11 @@ export const defaultEmailIntegrationSettings: EmailIntegrationSettings = {
   imapPort: "993",
   imapUser: "",
   imapPass: "",
+  googleConnected: false,
+  googleEmail: "",
+  googleAccessToken: "",
+  googleRefreshToken: "",
+  googleTokenExpiry: 0,
 };
 
 export const metrics = {

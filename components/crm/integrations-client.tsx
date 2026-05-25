@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCrm } from "@/components/crm/crm-provider";
 import { Badge, Card, SectionHeader } from "@/components/ui/primitives";
 
@@ -10,6 +10,22 @@ export function IntegrationsClient() {
   const [testTo, setTestTo] = useState("");
   const [result, setResult] = useState("");
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem("assetlift-google-workspace-oauth");
+    if (!raw) return;
+
+    try {
+      const payload = JSON.parse(raw);
+      const nextSettings = { ...settings, ...payload };
+      setSettings(nextSettings);
+      saveEmailSettings(nextSettings);
+      window.localStorage.removeItem("assetlift-google-workspace-oauth");
+      setResult(payload.googleEmail ? `Connected as ${payload.googleEmail}` : "Google Workspace connected");
+    } catch {
+      // Ignore malformed local payloads.
+    }
+  }, [saveEmailSettings, settings]);
 
   async function sendTestEmail() {
     setSending(true);
@@ -76,9 +92,29 @@ export function IntegrationsClient() {
         <SectionHeader
           eyebrow="Email integration"
           title="Connect your mailbox"
-          description="Enter SMTP and IMAP details here. Test send works once you provide valid provider credentials."
+          description="Google Workspace now needs OAuth. Use the connect button below, then test send from the connected mailbox."
         />
         <div className="login-grid">
+          <div className="empty-panel">
+            <strong>
+              {settings.googleConnected
+                ? `Connected to Google Workspace as ${settings.googleEmail || "your mailbox"}`
+                : "Google Workspace not connected"}
+            </strong>
+            <p>
+              Password-based Gmail setup is no longer the right default for Workspace. Connect the mailbox through Google sign-in instead.
+            </p>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => {
+                window.location.href = "/api/google/workspace/start";
+              }}
+            >
+              {settings.googleConnected ? "Reconnect Google Workspace" : "Connect Google Workspace"}
+            </button>
+          </div>
+
           <input value={settings.providerLabel} onChange={(e) => setSettings({ ...settings, providerLabel: e.target.value })} placeholder="Provider label" />
           <input value={settings.fromName} onChange={(e) => setSettings({ ...settings, fromName: e.target.value })} placeholder="From name" />
           <input value={settings.fromEmail} onChange={(e) => setSettings({ ...settings, fromEmail: e.target.value })} placeholder="From email" />
@@ -94,7 +130,7 @@ export function IntegrationsClient() {
             Save email settings
           </button>
           <input value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="Send test email to" />
-          <button type="button" className="secondary-button" onClick={sendTestEmail} disabled={sending}>
+          <button type="button" className="secondary-button" onClick={sendTestEmail} disabled={sending || !settings.googleConnected}>
             {sending ? "Sending..." : "Send test email"}
           </button>
           {result ? <p>{result}</p> : null}
